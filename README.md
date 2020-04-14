@@ -1,2 +1,2 @@
-# opentelemetry-js-plugins
-Lightstep plugins for OpenTelemetry JS
+# opentelemetry-contrib-js
+Lightstep contrib packages for OpenTelemetry JS
