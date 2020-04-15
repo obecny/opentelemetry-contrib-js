@@ -1,0 +1,21 @@
+{
+  "lerna": "3.20.2",
+  "npmClient": "npm",
+  "packages": [
+    "examples/*",
+    "packages/*"
+  ],
+  "version": "0.6.1",
+  "changelog": {
+    "repo": "opentelemetry-js-plugins",
+    "labels": {
+      "breaking": ":boom: Breaking Change",
+      "enhancement": ":rocket: (Enhancement)",
+      "bug": ":bug: (Bug Fix)",
+      "core": ":wrench: Core",
+      "document": ":books: (Refine Doc)",
+      "feature-request": ":sparkles: (Feature)"
+    },
+    "cacheDir": ".changelog"
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "name": "@lightstep/opentelemetry-metrics-collector",
+  "version": "0.6.1",
+  "description": "OpenTelemetry metrics collector - auto instrumentation package.",
+  "main": "build/src/index.js",
+  "types": "build/src/index.d.ts",
+  "repository": "lightstep/opentelemetry-js-plugins",
+  "scripts": {
+    "build:all": "node scripts/build_all.js",
+    "build:install": "node scripts/build_install.js",
+    "clean": "rimraf build/*",
+    "codecov": "nyc report --reporter=json && codecov -f coverage/*.json -p ../../",
+    "codecov:browser": "nyc report --reporter=json && codecov -f coverage/*.json -p ../../",
+    "compile": "tsc -p .",
+    "postcompile": "npm run build:install",
+    "lint": "gts check",
+    "lint:fix": "gts fix",
+    "precompile": "tsc --version",
+    "prepare": "npm run compile",
+    "tdd": "npm run test -- --watch-extensions ts --watch",
+    "tdd:browseer": "karma start",
+    "test": "nyc ts-mocha -p tsconfig.json test/**/*.test.ts",
+    "test:browser": "nyc karma start --single-run",
+    "watch": "tsc -w"
+  },
+  "keywords": [
+    "lightstep",
+    "metrics",
+    "opentelemetry",
+    "nodejs",
+    "stats",
+    "plugin",
+    "tracing"
+  ],
+  "author": "OpenTelemetry Authors",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=8.0.0"
+  },
+  "files": [
+    "build/src/**/*.js",
+    "build/src/**/*.d.ts",
+    "doc",
+    "LICENSE",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.6.0",
+    "@opentelemetry/exporter-prometheus": "^0.6.1",
+    "@types/mocha": "^5.2.5",
+    "@types/node": "^12.6.8",
+    "@types/sinon": "^7.0.13",
+    "@types/webpack-env": "1.13.9",
+    "babel-loader": "^8.0.6",
+    "checksum": "^0.1.1",
+    "codecov": "^3.6.1",
+    "gts": "^1.1.0",
+    "istanbul-instrumenter-loader": "^3.0.1",
+    "karma": "^4.4.1",
+    "karma-chrome-launcher": "^3.1.0",
+    "karma-coverage-istanbul-reporter": "^2.1.0",
+    "karma-mocha": "^1.3.0",
+    "karma-spec-reporter": "^0.0.32",
+    "karma-webpack": "^4.0.2",
+    "mkdirp": "^1.0.3",
+    "mocha": "^6.1.0",
+    "nyc": "^15.0.0",
+    "rimraf": "^3.0.0",
+    "semver": "^7.1.3",
+    "sinon": "^7.5.0",
+    "systeminformation": "^4.23.1",
+    "ts-loader": "^6.0.4",
+    "ts-mocha": "^6.0.0",
+    "ts-node": "^8.6.2",
+    "tslint-consistent-codestyle": "^1.16.0",
+    "tslint-microsoft-contrib": "^6.2.0",
+    "typescript": "3.7.2",
+    "webpack": "^4.35.2",
+    "webpack-cli": "^3.3.9",
+    "webpack-merge": "^4.2.2"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^0.6.1",
+    "@opentelemetry/core": "^0.6.1",
+    "@opentelemetry/metrics": "^0.6.1",
+    "node-gyp-build": "^4.2.1"
+  }
+}

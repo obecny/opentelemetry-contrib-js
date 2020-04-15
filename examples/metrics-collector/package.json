@@ -1,0 +1,34 @@
+{
+  "name": "metrics-collector-example",
+  "private": true,
+  "version": "0.6.1",
+  "description": "Example of using @opentelemetry/metrics",
+  "main": "index.js",
+  "scripts": {
+    "start": "node node.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/open-telemetry/opentelemetry-js.git"
+  },
+  "keywords": [
+    "opentelemetry",
+    "http",
+    "tracing",
+    "metrics"
+  ],
+  "engines": {
+    "node": ">=8"
+  },
+  "author": "OpenTelemetry Authors",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/open-telemetry/opentelemetry-js/issues"
+  },
+  "dependencies": {
+    "@lightstep/opentelemetry-metrics-collector": "^0.6.1",
+    "@opentelemetry/exporter-prometheus": "^0.6.1",
+    "@opentelemetry/metrics": "^0.6.1"
+  },
+  "homepage": "https://github.com/open-telemetry/opentelemetry-js#readme"
+}
