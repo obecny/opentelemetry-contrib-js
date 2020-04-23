@@ -51,7 +51,6 @@ export class MetricsCollector {
   private _intervalCollect: number | undefined;
   private _intervalExport: number | undefined;
   private _exporter: metrics.MetricExporter;
-  private _headers: types.CollectorHeaders;
   private _meter: metrics.Meter;
   private _name: string;
   private _boundCounters: { [key: string]: api.BoundCounter } = {};
@@ -72,14 +71,10 @@ export class MetricsCollector {
         ? config.intervalExport
         : DEFAULT_INTERVAL_EXPORT;
     this._exporter = config.exporter;
-    this._headers = Object.assign({}, config.headers);
     this._exporter = config.exporter;
     this._name = config.name || DEFAULT_NAME;
     this._metricBoundCharacter =
       config.metricBoundCharacter || DEFAULT_METRIC_BOUND_CHARACTER;
-
-    console.log(this._headers);
-
     this._meter = new metrics.MeterProvider({
       interval: this._intervalExport,
       exporter: this._exporter,
@@ -95,8 +90,6 @@ export class MetricsCollector {
   }
 
   private _collectData(initial = false) {
-    console.log('_collectData');
-
     // CPU
     Object.values(CPU_LABELS).forEach(value => {
       this._counterUpdate(METRIC_NAMES.CPU, value, getCpuUsageData()[value]);
@@ -136,14 +129,12 @@ export class MetricsCollector {
   private _createCounter(
     metricName: string,
     values: string[],
-    description?: string,
-    labels: string[] = [],
-    labelsKey: string = ''
+    description?: string
   ) {
     const keys = values.map(key => this._boundKey(metricName, key));
     const counter = this._meter.createCounter(metricName, {
       monotonic: true,
-      labelKeys: [DEFAULT_KEY].concat(Object.keys(labels)),
+      labelKeys: [DEFAULT_KEY],
       description: description || metricName,
     });
     keys.forEach(key => {
@@ -157,7 +148,7 @@ export class MetricsCollector {
 
   private _createObserver(
     metricName: string,
-    valuesToBeObserved: string[],
+    values: string[],
     callback: (value: string, key?: string) => number | undefined,
     description: string,
     labelValues: string[] = [],
@@ -175,7 +166,7 @@ export class MetricsCollector {
     }) as metrics.ObserverMetric;
 
     observer.setCallback(observerResult => {
-      valuesToBeObserved.forEach(value => {
+      values.forEach(value => {
         const boundKey = this._boundKey(
           this._boundKey(metricName, value),
           afterKey
