@@ -19,15 +19,8 @@ export interface MemoryData {
 }
 
 export interface NetworkData {
-  rxBytes: number;
-  rxDropped: number;
-  rxErrors: number;
-  rxSec: number;
-  txBytes: number;
-  txDropped: number;
-  txErrors: number;
-  txSec: number;
-  ms: number;
+  bytesRecv: number;
+  bytesSent: number;
 }
 
 export interface ProcessData {
@@ -36,12 +29,13 @@ export interface ProcessData {
 
 export interface CpuUsageData {
   user: number;
-  system: number;
+  sys: number;
   usage: number;
   total: number;
 }
 
-export interface MemoryUsageData {
+export interface MemoryData {
+  available: number;
   external: number;
   free: number;
   heapTotal: number;
@@ -75,9 +69,9 @@ export interface NativeStatsSpaceItem {
 }
 
 export interface NativeStatsSpaceItemNumbers {
-  spaceSize: number;
-  spaceUsedSize: number;
-  spaceAvailableSize: number;
+  size: number;
+  usedSize: number;
+  availableSize: number;
   physicalSpaceSize: number;
 }
 
@@ -89,6 +83,7 @@ export interface NativeStatsItem {
   count: number;
   median: number;
   p95: number;
+  total: number;
 }
 
 export interface CacheItem {

@@ -4,21 +4,22 @@ import {
   CPU_LABELS,
   HEAP_LABELS,
   MEMORY_LABELS,
-  MEMORY_USAGE_LABELS,
   METRIC_NAMES,
   NATIVE_SPACE_ITEM,
-  NATIVE_STATS_ITEM,
   NETWORK_LABELS,
   PROCESS_LABELS,
+  NATIVE_STATS_ITEM,
+  NATIVE_STATS_ITEM_COUNTER,
+  MEMORY_LABELS_RUNTIME,
 } from './enum';
 import {
   getCpuUsageData,
   getHeapData,
-  getMemoryUsageData,
+  getMemoryData,
   getProcessData,
 } from './stats/common';
 import { getStats } from './stats/native';
-import { getMemoryData, getNetworkData } from './stats/si';
+import { getNetworkData } from './stats/si';
 import * as types from './types';
 
 interface MetricsCollectorConfig {
@@ -59,7 +60,6 @@ export class MetricsCollector {
     keys: string[];
   }[] = [];
 
-  private _lastMemoryData: Partial<types.MemoryData> = {};
   private _metricBoundCharacter: string;
 
   constructor(config: MetricsCollectorConfig) {
@@ -88,19 +88,14 @@ export class MetricsCollector {
   }
 
   private _boundKey(metricName: string, key: string) {
-    const boundKey = `${metricName}${this._metricBoundCharacter}${key}`;
-    // if (!boundKey.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/)) {
-    //   throw `Provided key ${ boundKey } cannot be used`;
-    // }
-    return boundKey;
+    if (!key) {
+      return metricName;
+    }
+    return `${metricName}${this._metricBoundCharacter}${key}`;
   }
 
   private _collectData(initial = false) {
     console.log('_collectData');
-
-    getMemoryData().then(memoryData => {
-      this._lastMemoryData = memoryData;
-    });
 
     // CPU
     Object.values(CPU_LABELS).forEach(value => {
@@ -113,6 +108,24 @@ export class MetricsCollector {
         this._counterUpdate(METRIC_NAMES.NETWORK, value, networkData[value]);
       });
     });
+
+    // EVENT LOOP COUNTERS
+    const stats = getStats();
+    this._counterUpdate(
+      METRIC_NAMES.EVENT_LOOP_DELAY_COUNTER,
+      NATIVE_STATS_ITEM_COUNTER.COUNT,
+      stats.eventLoop.count
+    );
+    this._counterUpdate(
+      METRIC_NAMES.EVENT_LOOP_DELAY_COUNTER,
+      NATIVE_STATS_ITEM_COUNTER.SUM,
+      stats.eventLoop.sum
+    );
+    this._counterUpdate(
+      METRIC_NAMES.EVENT_LOOP_DELAY_COUNTER,
+      NATIVE_STATS_ITEM_COUNTER.TOTAL,
+      stats.eventLoop.sum
+    );
   }
 
   private _counterUpdate(metricName: string, key: string, value: number = 0) {
@@ -123,12 +136,14 @@ export class MetricsCollector {
   private _createCounter(
     metricName: string,
     values: string[],
-    description?: string
+    description?: string,
+    labels: string[] = [],
+    labelsKey: string = ''
   ) {
     const keys = values.map(key => this._boundKey(metricName, key));
     const counter = this._meter.createCounter(metricName, {
       monotonic: true,
-      labelKeys: [DEFAULT_KEY],
+      labelKeys: [DEFAULT_KEY].concat(Object.keys(labels)),
       description: description || metricName,
     });
     keys.forEach(key => {
@@ -142,25 +157,52 @@ export class MetricsCollector {
 
   private _createObserver(
     metricName: string,
-    values: string[],
-    callback: (value: string) => number | undefined,
-    description?: string
+    valuesToBeObserved: string[],
+    callback: (value: string, key?: string) => number | undefined,
+    description: string,
+    labelValues: string[] = [],
+    labelKey: string = '',
+    afterKey: string = ''
   ) {
+    const labelKeys = [DEFAULT_KEY];
+    if (labelKey) {
+      labelKeys.push(labelKey);
+    }
     const observer = this._meter.createObserver(metricName, {
       monotonic: false,
-      labelKeys: [DEFAULT_KEY],
+      labelKeys: labelKeys,
       description: description || metricName,
     }) as metrics.ObserverMetric;
 
     observer.setCallback(observerResult => {
-      values.forEach(value => {
-        const boundKey = this._boundKey(metricName, value);
-        observerResult.observe(
-          () => {
-            return callback(value);
-          },
-          { [DEFAULT_KEY]: boundKey }
+      valuesToBeObserved.forEach(value => {
+        const boundKey = this._boundKey(
+          this._boundKey(metricName, value),
+          afterKey
         );
+        if (labelKey) {
+          // there is extra label to be observed mixed with default one
+          // for example we want to be able to observe name and gc_type
+          labelValues.forEach(label => {
+            const observedLabels = Object.assign(
+              {},
+              { [DEFAULT_KEY]: boundKey },
+              {
+                [labelKey]: label,
+              }
+            );
+            observerResult.observe(() => {
+              return callback(value, label);
+            }, observedLabels);
+          });
+        } else {
+          observerResult.observe(
+            () => {
+              return callback(value);
+            },
+            { [DEFAULT_KEY]: boundKey }
+          );
+        }
       });
     });
   }
@@ -180,22 +222,22 @@ export class MetricsCollector {
       'Network Usage'
     );
 
-    // MEMORY USED
-    this._createObserver(
-      METRIC_NAMES.MEMORY_USAGE,
-      Object.values(MEMORY_USAGE_LABELS),
-      key => {
-        return getMemoryUsageData()[key as keyof types.MemoryUsageData];
-      },
-      'Memory Usage'
-    );
-
     // MEMORY
     this._createObserver(
       METRIC_NAMES.MEMORY,
       Object.values(MEMORY_LABELS),
       key => {
-        return this._lastMemoryData[key as keyof types.MemoryData];
+        return getMemoryData()[key as keyof types.MemoryData];
+      },
+      'Memory'
+    );
+
+    // MEMORY RUNTIME
+    this._createObserver(
+      METRIC_NAMES.MEMORY_RUNTIME,
+      Object.values(MEMORY_LABELS_RUNTIME),
+      key => {
+        return getMemoryData()[key as keyof types.MemoryData];
       },
       'Memory'
     );
@@ -230,53 +272,60 @@ export class MetricsCollector {
       'Event Loop'
     );
 
-    // GC
-    Object.keys(getStats().gc).forEach(statsKey => {
-      if (statsKey === 'all') {
-        this._createObserver(
-          METRIC_NAMES.GC,
-          Object.values(NATIVE_STATS_ITEM),
-          key => {
-            return getStats().gc[statsKey][key as keyof types.NativeStatsItem];
-          },
-          'GC for all'
-        );
-      } else {
-        this._createObserver(
-          this._boundKey(METRIC_NAMES.GC_BY_TYPE, statsKey),
-          Object.values(NATIVE_STATS_ITEM),
-          key => {
-            return getStats().gc[statsKey][key as keyof types.NativeStatsItem];
-          },
-          `GC for ${statsKey}`
-        );
-      }
-    });
+    // EVENT LOOP COUNTERS
+    this._createCounter(
+      METRIC_NAMES.EVENT_LOOP_DELAY_COUNTER,
+      Object.values(NATIVE_STATS_ITEM_COUNTER),
+      'Event Loop'
+    );
+
+    // GC ALL
+    this._createObserver(
+      METRIC_NAMES.GC,
+      Object.values(NATIVE_STATS_ITEM),
+      key => {
+        return getStats().gc.all[key as keyof types.NativeStatsItem];
+      },
+      'GC for all'
+    );
+
+    // GC BY TYPE
+    this._createObserver(
+      METRIC_NAMES.GC_BY_TYPE,
+      Object.values(NATIVE_STATS_ITEM),
+      (key, label = '') => {
+        return getStats().gc[label][key as keyof types.NativeStatsItem];
+      },
+      'GC by type',
+      Object.keys(getStats().gc).filter(key => key !== 'all'),
+      'gc_type'
+    );
 
     // HEAP SPACE
-    const spaces = getStats().heap.spaces;
+    const spacesLabels = getStats().heap.spaces.map(space => space.spaceName);
 
-    spaces.forEach((space, index) => {
-      this._createObserver(
-        this._boundKey(METRIC_NAMES.HEAP_SPACE, space.spaceName),
-        Object.values(NATIVE_SPACE_ITEM),
-        key => {
-          return getStats().heap.spaces[index][
-            key as keyof types.NativeStatsSpaceItemNumbers
-          ];
-        },
-        'Heap Spaces'
-      );
-    });
+    this._createObserver(
+      METRIC_NAMES.HEAP_SPACE,
+      Object.values(NATIVE_SPACE_ITEM),
+      (key, label = '') => {
+        const index = spacesLabels.indexOf(label);
+        const stat = getStats().heap.spaces[index];
+        const value = stat[key as keyof types.NativeStatsSpaceItemNumbers];
+        return value;
+      },
+      'Heap Spaces',
+      spacesLabels,
+      'heap_space',
+      this._boundKey('by', 'space')
+    );
   }
 
   private async _start() {
     // initial collection
     getCpuUsageData();
-    getMemoryUsageData();
+    getMemoryData();
     getHeapData();
     getProcessData();
-    this._lastMemoryData = await getMemoryData();
 
     this._createMetrics();
     setInterval(() => {

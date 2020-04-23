@@ -16,10 +16,10 @@ namespace lightstep {
 
       if (isolate->GetHeapSpaceStatistics(&stats, i)) {
         space.set("spaceName", std::string(stats.space_name()));
-        space.set("spaceSize", stats.space_size());
-        space.set("spaceUsedSize", stats.space_used_size());
-        space.set("spaceAvailableSize", stats.space_available_size());
-        space.set("physicalSpaceSize", stats.physical_space_size());
+        space.set("size", stats.space_size());
+        space.set("usedSize", stats.space_used_size());
+        space.set("availableSize", stats.space_available_size());
+        space.set("physicalSize", stats.physical_space_size());
 
         spaces.push_back(space);
       }

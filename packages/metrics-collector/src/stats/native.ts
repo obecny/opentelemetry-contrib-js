@@ -10,7 +10,16 @@ const nativeMetrics = nodeGypBuild(base);
 nativeMetrics.start();
 
 export function getStats(): NativeStats {
-  return getFromCache(METRIC_NAMES.CPU, () => {
-    return nativeMetrics ? nativeMetrics.stats() : undefined;
+  return getFromCache(METRIC_NAMES.NATIVE, () => {
+    const stats: NativeStats = nativeMetrics
+      ? nativeMetrics.stats()
+      : undefined;
+    if (stats) {
+      stats.eventLoop.total = stats.eventLoop.sum;
+      Object.keys(stats.gc).forEach(key => {
+        stats.gc[key].total = stats.gc[key].sum;
+      });
+    }
+    return stats;
   });
 }
