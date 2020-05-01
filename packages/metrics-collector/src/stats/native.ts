@@ -1,17 +1,21 @@
 import { getFromCache } from '../cache';
 import { METRIC_NAMES } from '../enum';
-import { NativeStats } from '../types';
+import { NativeStats, NativeStatsObj } from '../types';
 
 const nodeGypBuild = require('node-gyp-build');
 const path = require('path');
-const base = path.resolve(`${__dirname}/../../..`);
-const nativeMetrics = nodeGypBuild(base);
+const base = path.resolve(`${__dirname}/../..`);
+let nativeMetrics: NativeStatsObj;
 
-nativeMetrics.start();
-
-export function getStats(): NativeStats {
+export function getStats(): NativeStats | undefined {
+  if (!nativeMetrics) {
+    try {
+      nativeMetrics = nodeGypBuild(base);
+      nativeMetrics.start();
+    } catch (e) {}
+  }
   return getFromCache(METRIC_NAMES.NATIVE, () => {
-    const stats: NativeStats = nativeMetrics
+    const stats: NativeStats | undefined = nativeMetrics
       ? nativeMetrics.stats()
       : undefined;
     if (stats) {

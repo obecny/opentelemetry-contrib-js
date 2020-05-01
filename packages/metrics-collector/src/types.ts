@@ -56,6 +56,12 @@ export interface HeapData {
   usedHeapSize: number;
 }
 
+export interface NativeStatsObj {
+  stats: () => NativeStats;
+  start: () => void;
+  stop: () => void;
+}
+
 export interface NativeStats {
   eventLoop: NativeStatsItem;
   gc: { [key: string]: NativeStatsItem };

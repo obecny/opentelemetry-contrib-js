@@ -79,7 +79,7 @@ export class MetricsCollector {
       interval: this._intervalExport,
       exporter: this._exporter,
     }).getMeter(this._name);
-    this._start().then();
+    this._start();
   }
 
   private _boundKey(metricName: string, key: string) {
@@ -104,21 +104,23 @@ export class MetricsCollector {
 
     // EVENT LOOP COUNTERS
     const stats = getStats();
-    this._counterUpdate(
-      METRIC_NAMES.EVENT_LOOP_DELAY_COUNTER,
-      NATIVE_STATS_ITEM_COUNTER.COUNT,
-      stats.eventLoop.count
-    );
-    this._counterUpdate(
-      METRIC_NAMES.EVENT_LOOP_DELAY_COUNTER,
-      NATIVE_STATS_ITEM_COUNTER.SUM,
-      stats.eventLoop.sum
-    );
-    this._counterUpdate(
-      METRIC_NAMES.EVENT_LOOP_DELAY_COUNTER,
-      NATIVE_STATS_ITEM_COUNTER.TOTAL,
-      stats.eventLoop.sum
-    );
+    if (stats) {
+      this._counterUpdate(
+        METRIC_NAMES.EVENT_LOOP_DELAY_COUNTER,
+        NATIVE_STATS_ITEM_COUNTER.COUNT,
+        stats.eventLoop.count
+      );
+      this._counterUpdate(
+        METRIC_NAMES.EVENT_LOOP_DELAY_COUNTER,
+        NATIVE_STATS_ITEM_COUNTER.SUM,
+        stats.eventLoop.sum
+      );
+      this._counterUpdate(
+        METRIC_NAMES.EVENT_LOOP_DELAY_COUNTER,
+        NATIVE_STATS_ITEM_COUNTER.TOTAL,
+        stats.eventLoop.sum
+      );
+    }
   }
 
   private _counterUpdate(metricName: string, key: string, value: number = 0) {
@@ -183,7 +185,7 @@ export class MetricsCollector {
               }
             );
             observerResult.observe(() => {
-              return callback(value, label);
+              return callback(value, label) || 0;
             }, observedLabels);
           });
         } else {
@@ -258,7 +260,8 @@ export class MetricsCollector {
       METRIC_NAMES.EVENT_LOOP_DELAY,
       Object.values(NATIVE_STATS_ITEM),
       key => {
-        return getStats().eventLoop[key as keyof types.NativeStatsItem];
+        const stats = getStats();
+        return stats?.eventLoop[key as keyof types.NativeStatsItem];
       },
       'Event Loop'
     );
@@ -275,7 +278,8 @@ export class MetricsCollector {
       METRIC_NAMES.GC,
       Object.values(NATIVE_STATS_ITEM),
       key => {
-        return getStats().gc.all[key as keyof types.NativeStatsItem];
+        const stats = getStats();
+        return stats?.gc.all[key as keyof types.NativeStatsItem];
       },
       'GC for all'
     );
@@ -285,24 +289,41 @@ export class MetricsCollector {
       METRIC_NAMES.GC_BY_TYPE,
       Object.values(NATIVE_STATS_ITEM),
       (key, label = '') => {
-        return getStats().gc[label][key as keyof types.NativeStatsItem];
+        const stats = getStats();
+        const stat = stats?.gc[label];
+        if (stat) {
+          return stat[key as keyof types.NativeStatsItem];
+        }
+        return undefined;
       },
       'GC by type',
-      Object.keys(getStats().gc).filter(key => key !== 'all'),
+      [
+        'scavenge',
+        'markSweepCompact',
+        'incrementalMarking',
+        'processWeakCallbacks',
+      ],
       'gc_type'
     );
 
     // HEAP SPACE
-    const spacesLabels = getStats().heap.spaces.map(space => space.spaceName);
+    const stats = getStats();
+    const spacesLabels = stats?.heap.spaces.map(space => space.spaceName);
 
     this._createObserver(
       METRIC_NAMES.HEAP_SPACE,
       Object.values(NATIVE_SPACE_ITEM),
       (key, label = '') => {
+        if (spacesLabels === undefined) {
+          return undefined;
+        }
         const index = spacesLabels.indexOf(label);
-        const stat = getStats().heap.spaces[index];
-        const value = stat[key as keyof types.NativeStatsSpaceItemNumbers];
-        return value;
+        const stats = getStats();
+        const stat = stats?.heap.spaces[index];
+        if (stat) {
+          return stat[key as keyof types.NativeStatsSpaceItemNumbers];
+        }
+        return undefined;
       },
       'Heap Spaces',
       spacesLabels,
@@ -311,12 +332,13 @@ export class MetricsCollector {
     );
   }
 
-  private async _start() {
+  private _start() {
     // initial collection
     getCpuUsageData();
     getMemoryData();
     getHeapData();
     getProcessData();
+    getStats();
 
     this._createMetrics();
     setInterval(() => {
