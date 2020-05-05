@@ -338,6 +338,7 @@ export class MetricsCollector {
     getMemoryData();
     getHeapData();
     getProcessData();
+    getNetworkData();
     getStats();
 
     this._createMetrics();
