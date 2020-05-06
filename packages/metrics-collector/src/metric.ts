@@ -1,4 +1,5 @@
 import * as api from '@opentelemetry/api';
+import { unrefTimer } from '@opentelemetry/core';
 import * as metrics from '@opentelemetry/metrics';
 import {
   CPU_LABELS,
@@ -342,8 +343,9 @@ export class MetricsCollector {
     getStats();
 
     this._createMetrics();
-    setInterval(() => {
+    const timer = setInterval(() => {
       this._collectData();
     }, this._intervalCollect);
+    unrefTimer((timer as unknown) as NodeJS.Timeout);
   }
 }

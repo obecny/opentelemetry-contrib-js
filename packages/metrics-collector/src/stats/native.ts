@@ -12,7 +12,9 @@ export function getStats(): NativeStats | undefined {
     try {
       nativeMetrics = nodeGypBuild(base);
       nativeMetrics.start();
-    } catch (e) {}
+    } catch (e) {
+      console.log(e.message);
+    }
   }
   return getFromCache(METRIC_NAMES.NATIVE, () => {
     const stats: NativeStats | undefined = nativeMetrics

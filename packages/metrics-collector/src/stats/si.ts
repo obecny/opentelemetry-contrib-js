@@ -21,11 +21,10 @@ export function getNetworkData() {
         });
         const lastStats = Object.assign({}, stats);
 
-        if (previousNetworkStats) {
-          ObjectKeys(stats).forEach(key => {
-            stats[key] = stats[key] - (previousNetworkStats[key] || 0);
-          });
-        }
+        ObjectKeys(stats).forEach(key => {
+          stats[key] = stats[key] - (previousNetworkStats[key] || 0);
+        });
+
         previousNetworkStats = lastStats;
         resolve(stats);
       })

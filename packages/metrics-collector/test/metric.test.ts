@@ -85,7 +85,9 @@ describe('metric', () => {
     sandbox.stub(process, 'cpuUsage').returns(cpuJson);
     sandbox.stub(process, 'memoryUsage').returns(memoryJson);
     sandbox.stub(process, 'uptime').returns(mockedUptime);
-    sandbox.stub(SI, 'networkStats').returns(mockedSI.networkStats());
+    const spyNetworkStats = sandbox
+      .stub(SI, 'networkStats')
+      .returns(mockedSI.networkStats());
 
     exporter = new NoopExporter();
     exportSpy = sandbox.stub(exporter, 'export');
@@ -101,6 +103,11 @@ describe('metric', () => {
       name: 'lightstep-metrics-collector',
       url: '',
     });
+    // because networkStats mock simulates the network with every call it
+    // returns the data that is bigger then previous, it needs to stub it again
+    // as network is also called in initial start to start counting from 0
+    spyNetworkStats.restore();
+    sandbox.stub(SI, 'networkStats').returns(mockedSI.networkStats());
   });
   afterEach(() => {
     sandbox.restore();
