@@ -29,7 +29,7 @@ interface MetricsCollectorConfig {
   /**
    * Character to be used to join metrics - default is "."
    */
-  metricBoundCharacter?: string;
+  metricNameSeparator?: string;
   /**
    * Name of component
    */
@@ -45,7 +45,7 @@ interface MetricsCollectorConfig {
 const DEFAULT_INTERVAL_COLLECT = 30 * 1000;
 const DEFAULT_INTERVAL_EXPORT = 60 * 1000;
 const DEFAULT_NAME = 'lightstep-metrics-collector';
-const DEFAULT_METRIC_BOUND_CHARACTER = '.';
+const DEFAULT_METRIC_NAME_SEPARATOR = '.';
 const DEFAULT_KEY = 'name';
 
 export class MetricsCollector {
@@ -55,12 +55,8 @@ export class MetricsCollector {
   private _meter: metrics.Meter;
   private _name: string;
   private _boundCounters: { [key: string]: api.BoundCounter } = {};
-  private _counters: {
-    counter: api.Metric<api.BoundCounter>;
-    keys: string[];
-  }[] = [];
 
-  private _metricBoundCharacter: string;
+  private _metricNameSeparator: string;
 
   constructor(config: MetricsCollectorConfig) {
     this._intervalCollect =
@@ -74,8 +70,8 @@ export class MetricsCollector {
     this._exporter = config.exporter;
     this._exporter = config.exporter;
     this._name = config.name || DEFAULT_NAME;
-    this._metricBoundCharacter =
-      config.metricBoundCharacter || DEFAULT_METRIC_BOUND_CHARACTER;
+    this._metricNameSeparator =
+      config.metricNameSeparator || DEFAULT_METRIC_NAME_SEPARATOR;
     this._meter = new metrics.MeterProvider({
       interval: this._intervalExport,
       exporter: this._exporter,
@@ -87,7 +83,7 @@ export class MetricsCollector {
     if (!key) {
       return metricName;
     }
-    return `${metricName}${this._metricBoundCharacter}${key}`;
+    return `${metricName}${this._metricNameSeparator}${key}`;
   }
 
   private _collectData(initial = false) {
@@ -142,10 +138,6 @@ export class MetricsCollector {
     });
     keys.forEach(key => {
       this._boundCounters[key] = counter.bind({ [DEFAULT_KEY]: key });
-    });
-    this._counters.push({
-      counter,
-      keys,
     });
   }
 
